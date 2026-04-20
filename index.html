@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>P-tillstånd</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success-bg: #dbeafe;
+      --success-border: #93c5fd;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .h1-sub {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .hint {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 1.1rem;
+      outline: none;
+      letter-spacing: 0.05em;
+      transition: border-color 0.2s;
+      margin-bottom: 0.5rem;
+    }
+
+    input:focus { border-color: var(--primary); }
+    input::placeholder { color: #c0ccd8; }
+    input.error { border-color: #ef4444; }
+
+    .error-msg {
+      font-size: 0.82rem;
+      color: #ef4444;
+      min-height: 1.2em;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: var(--primary-dark); }
+
+    .result {
+      display: none;
+      margin-top: 1.5rem;
+      background: var(--success-bg);
+      border: 1.5px solid var(--success-border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+    }
+
+    .result.show { display: block; }
+
+    .result .label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .result .id {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: 0.08em;
+    }
+
+    .copy-btn {
+      margin-top: 0.9rem;
+      width: auto;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: white;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .copy-btn:hover { background: var(--success-bg); }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Generera ditt P-tillstånds-ID<br><span class="h1-sub">(för dig som bor i Brf Turbinhallen)</span></h1>
+  <br>
+  <p class="subtitle">Ange ditt lägenhetsnummer nedan.</p>
+
+  <label for="lgh-input">Lägenhetsnummer</label>
+  <p class="hint">Format: 1–2 siffror, bindestreck, 4 siffror &nbsp;(t.ex. <strong>10-1302</strong> eller <strong>1-1204</strong>)</p>
+  <input
+    type="text"
+    id="lgh-input"
+    placeholder="10-1302"
+    maxlength="10"
+    autocomplete="off"
+    spellcheck="false"
+  />
+  <div class="error-msg" id="error-msg"></div>
+
+  <button onclick="generate()">Generera P-tillstånds-ID</button>
+
+  <div class="result" id="result">
+    <div class="label">P-tillstånds-ID</div>
+    <div class="id" id="result-id"></div>
+    <button class="copy-btn" onclick="copyId()">Kopiera</button>
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById('lgh-input');
+  const errorMsg = document.getElementById('error-msg');
+  const result = document.getElementById('result');
+  const resultId = document.getElementById('result-id');
+
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
+  input.addEventListener('input', () => {
+    input.classList.remove('error');
+    errorMsg.textContent = '';
+    result.classList.remove('show');
+  });
+
+  function generate() {
+    const raw = input.value.trim();
+    const match = raw.match(/^(\d{1,2})-(\d{4})$/);
+
+    if (!match) {
+      input.classList.add('error');
+      errorMsg.textContent = 'Ogiltigt format. Exempel: 10-1302 eller 1-1204';
+      result.classList.remove('show');
+      return;
+    }
+
+    const portNum = parseInt(match[1], 10);
+    if (portNum < 1 || portNum > 14) {
+      input.classList.add('error');
+      errorMsg.textContent = `Port ${portNum} finns inte, ange ett tal mellan 1–14.`;
+      result.classList.remove('show');
+      return;
+    }
+
+    const prefix = match[1].padStart(2, '0');
+    const suffix = match[2];
+    const id = `T-${prefix}-${suffix}`;
+
+    resultId.textContent = id;
+    result.classList.add('show');
+    input.classList.remove('error');
+    errorMsg.textContent = '';
+  }
+
+  function copyId() {
+    const text = resultId.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Kopierat!';
+      setTimeout(() => btn.textContent = 'Kopiera', 2000);
+    });
+  }
+</script>
+
+</body>
+</html>
